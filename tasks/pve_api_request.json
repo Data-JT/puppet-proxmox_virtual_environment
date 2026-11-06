@@ -1,0 +1,50 @@
+{
+  "description": "Call any Proxmox Virtual Environment API endpoint exposed by /api2/json.",
+  "input_method": "stdin",
+  "parameters": {
+    "host": {
+      "description": "PVE host name or IP address.",
+      "type": "String[1]"
+    },
+    "port": {
+      "description": "PVE API port.",
+      "type": "Optional[Integer[1, 65535]]"
+    },
+    "token_id": {
+      "description": "PVE API token ID, for example puppet@pve!puppet-token.",
+      "type": "String[1]"
+    },
+    "token_secret": {
+      "description": "PVE API token secret.",
+      "type": "Sensitive[String[1]]"
+    },
+    "method": {
+      "description": "HTTP method.",
+      "type": "Enum['GET', 'POST', 'PUT', 'DELETE']"
+    },
+    "path": {
+      "description": "API path below /api2/json, for example /version or /storage/{storage}.",
+      "type": "Pattern[/^\\//]"
+    },
+    "path_params": {
+      "description": "Path template values for placeholders such as {name}.",
+      "type": "Optional[Hash[String, Any]]"
+    },
+    "query": {
+      "description": "Query string parameters.",
+      "type": "Optional[Hash[String, Any]]"
+    },
+    "body": {
+      "description": "JSON request body parameters.",
+      "type": "Optional[Hash[String, Any]]"
+    },
+    "ssl_verify": {
+      "description": "Verify the PVE TLS certificate.",
+      "type": "Optional[Boolean]"
+    },
+    "ssl_ca_file": {
+      "description": "Optional CA bundle path.",
+      "type": "Optional[String[1]]"
+    }
+  }
+}

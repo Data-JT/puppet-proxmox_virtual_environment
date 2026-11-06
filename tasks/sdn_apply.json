@@ -1,0 +1,46 @@
+{
+  "description": "Apply pending Proxmox Virtual Environment SDN configuration cluster-wide. Regenerates /etc/network/interfaces.d/sdn on every node and reloads networking there, so run it in a maintenance window. Use dry_run first to preview the change.",
+  "input_method": "stdin",
+  "parameters": {
+    "host": {
+      "description": "PVE host name or IP address.",
+      "type": "String[1]"
+    },
+    "port": {
+      "description": "PVE API port.",
+      "type": "Optional[Integer[1, 65535]]"
+    },
+    "token_id": {
+      "description": "PVE API token ID, for example puppet@pve!puppet-token.",
+      "type": "String[1]"
+    },
+    "token_secret": {
+      "description": "PVE API token secret.",
+      "type": "Sensitive[String[1]]"
+    },
+    "dry_run": {
+      "description": "Preview the change instead of applying it. Returns the interfaces and FRR diffs for the given node without touching anything. Requires node.",
+      "type": "Optional[Boolean]"
+    },
+    "node": {
+      "description": "Cluster node to compute the dry-run diff for. Only used with dry_run.",
+      "type": "Optional[String[1]]"
+    },
+    "wait": {
+      "description": "Wait for the apply worker task and fail unless it exits OK. Defaults to true.",
+      "type": "Optional[Boolean]"
+    },
+    "timeout": {
+      "description": "Seconds to wait for the apply worker task. Defaults to 300.",
+      "type": "Optional[Integer[1]]"
+    },
+    "ssl_verify": {
+      "description": "Verify the PVE TLS certificate.",
+      "type": "Optional[Boolean]"
+    },
+    "ssl_ca_file": {
+      "description": "Optional CA bundle path.",
+      "type": "Optional[String[1]]"
+    }
+  }
+}

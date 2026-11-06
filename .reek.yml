@@ -1,0 +1,262 @@
+---
+# Reek configuration. The layout is shared by puppet-proxmox_virtual_environment,
+# puppet-proxmox_backup_server and puppet-proxmox_datacenter_manager.
+#
+# CI runs Reek with a zero-warning baseline, so every exception is explicit,
+# named and commented. Exceptions live only in this file: the code carries no
+# inline :reek: comments.
+#
+# The single `detectors` mapping has two sections. Reek cannot merge two
+# entries for the same detector, so each detector appears in exactly one:
+#
+#   1. Shared base, identical in all three modules: threshold tuning for the
+#      method shapes the Puppet Resource API mandates, and the exceptions those
+#      detectors need in any of the modules.
+#   2. Module-specific: named, per-location exceptions for this module only.
+#
+# A string under `exclude` matches every context whose full name contains it
+# ("Class" or "Class#method"); a string written as "/.../" is a regular
+# expression.
+detectors:
+  # --- 1. Shared base -------------------------------------------------------
+  DataClump:
+    # The Resource API's create/update/delete callbacks share
+    # (context, name[, should]) by contract: exactly three methods. Raising
+    # max_copies from 2 to 3 stops flagging that mandatory CRUD shape while
+    # still catching a clump across four or more methods.
+    max_copies: 3
+    exclude:
+      # Each transport's HTTP verb helpers share (context, path, body, query).
+      - "/\\APuppet::Transport::Proxmox[A-Za-z]+\\z/"
+      # proxmox_virtual_environment only: providers that pass (context, name)
+      # to one helper beyond the CRUD triple, and the SDN providers that thread
+      # (context, should) and (context, vnet) through their path helpers.
+      - "Puppet::Provider::PveBackupJob::ProxmoxVirtualEnvironment"
+      - "Puppet::Provider::PveRole::ProxmoxVirtualEnvironment"
+      - "Puppet::Provider::PveSdnBaseProvider"
+      - "Puppet::Provider::PveSdnSubnet::ProxmoxVirtualEnvironment"
+      - "Puppet::Provider::PveStorage::ProxmoxVirtualEnvironment"
+      - "Puppet::Provider::PveUser::ProxmoxVirtualEnvironment"
+  LongParameterList:
+    # insync?(context, name, attribute_name, is, should) is the Resource API's
+    # mandated callback signature. Raising max_params from 3 to 5 stops
+    # flagging that contract while still catching six or more parameters.
+    max_params: 5
+    exclude:
+      # Each transport's generic call(context, method, path, body:, query:,
+      # path_params:) is the public request boundary; keyword arguments keep
+      # its call sites clear.
+      - "/\\APuppet::Transport::Proxmox[A-Za-z]+#call\\z/"
+
+  # --- 2. Module-specific (proxmox_virtual_environment) -------------------
+  Attribute:
+    exclude:
+      # SecretStore.priv_dir is writable purely as a test seam, so specs can point
+      # the store at a fixture tree instead of a real /etc/pve.
+      - "PuppetX::ProxmoxVirtualEnvironment::SecretStore#priv_dir"
+  ControlParameter:
+    # Resource API insync? callbacks and transport dispatch select behavior
+    # from required framework or HTTP-method arguments.
+    exclude:
+      - "Puppet::Provider::PveDatacenterConfig::ProxmoxVirtualEnvironment#insync?"
+      - "Puppet::Provider::PveRole::ProxmoxVirtualEnvironment#insync?"
+      - "Puppet::Provider::PveStorage::ProxmoxVirtualEnvironment#insync?"
+      - "Puppet::Provider::PveStorage::ProxmoxVirtualEnvironment#stored_secret"
+      - "Puppet::Provider::PveRealm::ProxmoxVirtualEnvironment#stored_secret"
+      - "Puppet::Provider::PveUser::ProxmoxVirtualEnvironment#stored_secret"
+      - "Puppet::Provider::PveUser::ProxmoxVirtualEnvironment#insync?"
+      - "Puppet::Transport::ProxmoxVirtualEnvironment#call"
+      - "Puppet::Transport::ProxmoxVirtualEnvironment#perform_request"
+  DuplicateMethodCall:
+    # These short integration methods intentionally repeat access to external
+    # API data while preserving response-field clarity.
+    exclude:
+      - "Puppet::Provider::PveAcl::ProxmoxVirtualEnvironment#get"
+      - "Puppet::Provider::PveApiToken::ProxmoxVirtualEnvironment#create"
+      - "Puppet::Provider::PveBackupJob::ProxmoxVirtualEnvironment#get"
+      - "Puppet::Provider::PveBaseProvider#assert_cluster_manager!"
+      - "Puppet::Provider::PveBaseProvider#puppet_to_pve"
+      - "Puppet::Provider::PveBaseProvider#pve_to_puppet"
+      - "Puppet::Transport::ProxmoxVirtualEnvironment#perform_request"
+  FeatureEnvy:
+    # These methods translate API payloads or configure external HTTP objects.
+    exclude:
+      - "Puppet::Provider::PveAcl::ProxmoxVirtualEnvironment#acl_body"
+      - "Puppet::Provider::PveAcl::ProxmoxVirtualEnvironment#get"
+      - "Puppet::Provider::PveApiToken::ProxmoxVirtualEnvironment#parse_tokenid!"
+      - "Puppet::Provider::PveApiToken::ProxmoxVirtualEnvironment#persist_secret"
+      - "Puppet::Provider::PveBackupJob::ProxmoxVirtualEnvironment#get"
+      - "Puppet::Provider::PveBackupJob::ProxmoxVirtualEnvironment#request_body"
+      - "Puppet::Provider::PveBaseProvider#validate_init_only_changes!"
+      - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment#decode_property_strings"
+      - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment#desired_secret_map"
+      - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment#stored_secret_map"
+      - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment#decode_webhook_fields!"
+      - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment#encode_property_strings"
+      - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment#encode_webhook_fields!"
+      - "Puppet::Provider::PveStorage::ProxmoxVirtualEnvironment#settable_should"
+      - "Puppet::Provider::PveStorage::ProxmoxVirtualEnvironment#encryption_key_insync?"
+      - "Puppet::Provider::PveUser::ProxmoxVirtualEnvironment#validate_userid!"
+      - "Puppet::Transport::ProxmoxVirtualEnvironment#handle_response"
+      - "Puppet::Transport::ProxmoxVirtualEnvironment#http_connection"
+      # Both translate a single external value: a PVE pending-state entry and
+      # the node embedded in a PVE task ID.
+      - "Puppet::Provider::PveSdnApply::ProxmoxVirtualEnvironment#pending_entries"
+      - "Puppet::Provider::PveSdnApply::ProxmoxVirtualEnvironment#task_node"
+  InstanceVariableAssumption:
+    # Providers retain discovery and transport state across Resource API callbacks.
+    exclude:
+      - "Puppet::Provider::PveBaseProvider"
+      - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment"
+      - "Puppet::Transport::ProxmoxVirtualEnvironment"
+  ManualDispatch:
+    # These methods dispatch to the API transport or unwrap sensitive values conditionally.
+    exclude:
+      - "Puppet::Provider::PveBaseProvider#puppet_to_pve"
+      - "Puppet::Provider::PveBaseProvider#unwrap_secret"
+      - "Puppet::Provider::PveUser::ProxmoxVirtualEnvironment#create"
+      - "Puppet::Transport::ProxmoxVirtualEnvironment#initialize"
+      # Pveum.unwrap accepts a declared value that may or may not be Sensitive.
+      - "PuppetX::ProxmoxVirtualEnvironment::Pveum#self.unwrap"
+  MissingSafeMethod:
+    # Bang helpers deliberately validate inputs before provider or transport operations.
+    exclude:
+      - "Puppet::Provider::PveApiToken::ProxmoxVirtualEnvironment"
+      - "Puppet::Provider::PveBaseProvider"
+      - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment"
+      - "Puppet::Provider::PveUser::ProxmoxVirtualEnvironment"
+      - "Puppet::Transport::ProxmoxVirtualEnvironment"
+  NestedIterators:
+    # List endpoints return nested resource collections that must be flattened.
+    exclude:
+      - "Puppet::Provider::PveBaseProvider#refresh_changes"
+      - "Puppet::Provider::PveBaseProvider#validate_init_only_changes!"
+      - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment#decode_property_strings"
+      - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment#get"
+  NilCheck:
+    # Optional API fields and transport configuration require explicit nil handling.
+    exclude:
+      - "Puppet::Provider::PveBaseProvider#puppet_to_pve"
+      - "Puppet::Provider::PveRealm::ProxmoxVirtualEnvironment#stored_bind_password?"
+      - "Puppet::Provider::PveUser::ProxmoxVirtualEnvironment#enforce_password"
+      - "Puppet::Provider::PveUser::ProxmoxVirtualEnvironment#stored_password?"
+      - "Puppet::Provider::PveBaseProvider#secret_insync?"
+      - "Puppet::Provider::PveBaseProvider#unwrap_secret"
+      - "Puppet::Provider::PveBaseProvider#pve_transport"
+      - "Puppet::Provider::PveBaseProvider#transport_get"
+      - "Puppet::Provider::PveDatacenterConfig::ProxmoxVirtualEnvironment#registered_tags_to_array"
+      - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment#delete"
+      - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment#stored_secret"
+      - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment#encode_property_strings"
+      - "Puppet::Provider::PveRole::ProxmoxVirtualEnvironment#privs_to_array"
+      - "Puppet::Provider::PveStorage::ProxmoxVirtualEnvironment#settable_should"
+      - "Puppet::Provider::PveStorage::ProxmoxVirtualEnvironment#encryption_key_insync?"
+      - "Puppet::Provider::PveStorage::ProxmoxVirtualEnvironment#stored_password?"
+      - "Puppet::Transport::ProxmoxVirtualEnvironment#blank?"
+      - "Puppet::Transport::ProxmoxVirtualEnvironment#handle_response"
+      # Crypt and SecretStore return nil for "no stored secret", which must stay
+      # distinct from an empty one: collapsing them would report a missing secret
+      # as in sync.
+      - "PuppetX::ProxmoxVirtualEnvironment::Crypt#self.hash_password"
+      - "PuppetX::ProxmoxVirtualEnvironment::Crypt#self.verify"
+      - "PuppetX::ProxmoxVirtualEnvironment::SecretStore#notification_secret"
+      - "PuppetX::ProxmoxVirtualEnvironment::SecretStore#notification_section"
+      - "PuppetX::ProxmoxVirtualEnvironment::SecretStore#shadow_entries"
+      - "PuppetX::ProxmoxVirtualEnvironment::SecretStore#shadow_entry"
+  RepeatedConditional:
+    # Webhook handling repeats the target-type branch across independent CRUD operations.
+    exclude:
+      - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment"
+  TooManyConstants:
+    # The apply provider names each PVE endpoint it touches plus its two poll
+    # tunables, which is clearer than inlining API paths at the call sites.
+    exclude:
+      - "Puppet::Provider::PveSdnApply::ProxmoxVirtualEnvironment"
+  TooManyInstanceVariables:
+    # The transport stores independent connection settings and request state.
+    exclude:
+      - "Puppet::Transport::ProxmoxVirtualEnvironment"
+  TooManyMethods:
+    # Shared provider and transport classes centralize their Resource API contracts.
+    exclude:
+      - "Puppet::Provider::PveBaseProvider"
+      # The SDN base centralizes the pending/apply, lock and list-normalisation
+      # contracts; the subnet provider additionally owns the derived-identifier
+      # mapping that no other SDN object class needs.
+      - "Puppet::Provider::PveSdnBaseProvider"
+      - "Puppet::Provider::PveSdnSubnet::ProxmoxVirtualEnvironment"
+      - "Puppet::Transport::ProxmoxVirtualEnvironment"
+  TooManyStatements:
+    # These integration methods are clearer as one linear API operation.
+    exclude:
+      # The transport constructor reads the connection settings it is given,
+      # one statement per key. Reek excludes initialize by default, but an
+      # explicit exclude list replaces that default, so it is restated here.
+      - "Puppet::Transport::ProxmoxVirtualEnvironment#initialize"
+      - "Puppet::Provider::PveAcl::ProxmoxVirtualEnvironment#acl_body"
+      - "Puppet::Provider::PveApiToken::ProxmoxVirtualEnvironment#create"
+      - "Puppet::Provider::PveApiToken::ProxmoxVirtualEnvironment#persist_secret"
+      - "Puppet::Provider::PveBaseProvider#assert_cluster_manager!"
+      - "Puppet::Provider::PveBaseProvider#secret_insync?"
+      - "Puppet::Provider::PveBaseProvider#puppet_to_pve"
+      - "Puppet::Provider::PveBaseProvider#pve_to_puppet"
+      - "Puppet::Provider::PveBaseProvider#refresh_changes"
+      - "Puppet::Provider::PveBaseProvider#validate_init_only_changes!"
+      - "Puppet::Provider::PveDatacenterConfig::ProxmoxVirtualEnvironment#get"
+      - "Puppet::Provider::PveDatacenterConfig::ProxmoxVirtualEnvironment#insync?"
+      - "Puppet::Provider::PveNodeConfig::ProxmoxVirtualEnvironment#node_config"
+      - "Puppet::Provider::PveRealm::ProxmoxVirtualEnvironment#get"
+      - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment#decode_property_strings"
+      - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment#encode_property_strings"
+      - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment#get"
+      - "Puppet::Provider::PveStorage::ProxmoxVirtualEnvironment#settable_should"
+      - "Puppet::Provider::PveStorage::ProxmoxVirtualEnvironment#encryption_key_insync?"
+      - "Puppet::Provider::PveUser::ProxmoxVirtualEnvironment#create"
+      - "Puppet::Transport::ProxmoxVirtualEnvironment#handle_response"
+      - "Puppet::Transport::ProxmoxVirtualEnvironment#http_connection"
+      - "Puppet::Transport::ProxmoxVirtualEnvironment#perform_request"
+      - "Puppet::Transport::ProxmoxVirtualEnvironment#request"
+      # insync? dispatches over three list-shaped attribute families, mirroring
+      # the base provider's own exclusion; wait_for_task is one linear poll loop
+      # over a PVE worker task.
+      - "Puppet::Provider::PveSdnBaseProvider#insync?"
+      - "Puppet::Provider::PveSdnApply::ProxmoxVirtualEnvironment#wait_for_task"
+  UncommunicativeVariableName:
+    # These identifiers mirror narrow external values or exception variables.
+    exclude:
+      - "Puppet::Provider::PveApiToken::ProxmoxVirtualEnvironment#persist_secret"
+      - "Puppet::Provider::PveNodeConfig::ProxmoxVirtualEnvironment#node_config"
+  UtilityFunction:
+    # These helpers belong with the provider or transport that defines their Resource API behavior.
+    # The property-string pair is the read and compare half of the property_string_attributes
+    # contract declared on the provider class, alongside unordered_csv_insync?.
+    exclude:
+      - "Puppet::Provider::PveBackupJob::ProxmoxVirtualEnvironment#property_string"
+      - "Puppet::Provider::PveBaseProvider#absent_state"
+      - "Puppet::Provider::PveRealm::ProxmoxVirtualEnvironment#stored_bind_password?"
+      - "Puppet::Provider::PveUser::ProxmoxVirtualEnvironment#secret_matches?"
+      - "Puppet::Provider::PveUser::ProxmoxVirtualEnvironment#stored_password?"
+      - "Puppet::Provider::PveBaseProvider#init_only_attributes"
+      - "Puppet::Provider::PveBaseProvider#parse_property_string"
+      - "Puppet::Provider::PveBaseProvider#secret_matches?"
+      - "Puppet::Provider::PveBaseProvider#serialize_property_string"
+      - "Puppet::Provider::PveBaseProvider#to_bool"
+      - "Puppet::Provider::PveBaseProvider#unwrap_secret"
+      - "Puppet::Provider::PveBaseProvider#unordered_csv_insync?"
+      - "Puppet::Provider::PveStorage::ProxmoxVirtualEnvironment#stored_secret"
+      - "Puppet::Provider::PveRealm::ProxmoxVirtualEnvironment#stored_secret"
+      - "Puppet::Provider::PveUser::ProxmoxVirtualEnvironment#stored_secret"
+      - "Puppet::Provider::PveStorage::ProxmoxVirtualEnvironment#stored_password?"
+      - "Puppet::Provider::PveDatacenterConfig::ProxmoxVirtualEnvironment#registered_tags_to_array"
+      - "Puppet::Provider::PveRole::ProxmoxVirtualEnvironment#privs_to_array"
+      - "Puppet::Transport::ProxmoxVirtualEnvironment#blank?"
+      - "Puppet::Transport::ProxmoxVirtualEnvironment#expand_path"
+      # The SDN half of the same contract family: pure value transforms that
+      # belong with the provider declaring string_list_attributes, the derived
+      # subnet identifier mapping that mirrors PVE's parse_sdn_subnet_id, and
+      # the zone plugin-type check.
+      - "Puppet::Provider::PveSdnBaseProvider#normalize_string_list"
+      - "Puppet::Provider::PveSdnSubnet::ProxmoxVirtualEnvironment#cidr_from_id"
+      - "Puppet::Provider::PveSdnSubnet::ProxmoxVirtualEnvironment#with_pending_state"
+      - "Puppet::Provider::PveSdnZone::ProxmoxVirtualEnvironment#misplaced_attributes"
+      - "Puppet::Provider::PveSdnApply::ProxmoxVirtualEnvironment#monotonic_now"

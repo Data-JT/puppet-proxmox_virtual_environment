@@ -1,0 +1,3 @@
+fixtures:
+  symlinks:
+    proxmox_virtual_environment: "#{source_dir}"

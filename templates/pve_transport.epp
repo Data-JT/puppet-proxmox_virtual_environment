@@ -1,0 +1,21 @@
+<%- |
+  String           $host,
+  Integer          $port,
+  String           $token_id,
+  String           $token_secret,
+  String           $cluster_manager,
+  Boolean          $ssl_verify,
+  Optional[String] $ssl_ca_file,
+| -%>
+# Puppet-managed PVE transport configuration.
+# Read by the proxmox_virtual_environment providers at agent run time.
+---
+host: '<%= regsubst($host, "'", "''", 'G') %>'
+port: <%= $port %>
+token_id: '<%= regsubst($token_id, "'", "''", 'G') %>'
+token_secret: '<%= regsubst($token_secret, "'", "''", 'G') %>'
+cluster_manager: '<%= regsubst($cluster_manager, "'", "''", 'G') %>'
+ssl_verify: <%= $ssl_verify %>
+<% if $ssl_ca_file { -%>
+ssl_ca_file: '<%= regsubst($ssl_ca_file, "'", "''", 'G') %>'
+<% } -%>
