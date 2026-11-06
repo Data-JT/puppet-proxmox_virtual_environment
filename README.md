@@ -49,9 +49,16 @@ description with the live configuration and changes only what differs.
 ### How it works
 
 ```text
-Hiera / manifest ──> proxmox_virtual_environment class ──> pve_transport.yaml (token, 0600)
-                                                                 │
-Puppet agent on the PVE node ──> pve_* types ──> https://localhost:8006 (PVE REST API)
+Hiera / manifest                    declares the class and the resources
+      │
+      ▼
+proxmox_virtual_environment class   writes pve_transport.yaml (token, 0600)
+      │
+      ▼
+pve_* types                         read that file on every agent run on the PVE node
+      │
+      ▼
+PVE REST API                        https://localhost:8006
 ```
 
 The `proxmox_virtual_environment` class writes the API token and connection settings to a
