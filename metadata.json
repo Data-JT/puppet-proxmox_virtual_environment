@@ -1,6 +1,6 @@
 {
   "name": "datajt-proxmox_virtual_environment",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "Data JT",
   "summary": "Manages Proxmox Virtual Environment resources declaratively via the PVE REST API.",
   "license": "Apache-2.0",
