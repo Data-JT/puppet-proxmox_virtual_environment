@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-21
+
 ### Fixed
 
 - `pve_storage`: `pool` is fixed at creation only on `zfs` and `zfspool` storage, and
@@ -91,6 +93,7 @@ Initial release.
   existing PVE cluster. It is not part of the Forge package.
 - Least-privilege token setup guidance in the README.
 
-[Unreleased]: https://github.com/Data-JT/puppet-proxmox_virtual_environment/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/Data-JT/puppet-proxmox_virtual_environment/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/Data-JT/puppet-proxmox_virtual_environment/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Data-JT/puppet-proxmox_virtual_environment/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Data-JT/puppet-proxmox_virtual_environment/releases/tag/v0.1.0
