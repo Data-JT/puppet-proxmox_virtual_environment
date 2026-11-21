@@ -38,11 +38,18 @@ intentionally absent, because PVE does not expose equivalent configuration objec
 module `datajt-proxmox_backup_server` covers them. PVE's scheduled vzdump jobs are managed with
 `pve_backup_job`.
 
-## Immutable types
+## Attributes fixed at creation
 
-The `type` attribute of a storage, realm or notification target cannot be changed after creation.
-The module rejects such changes before calling PVE; set `ensure => absent` and re-create the
-resource with the new type.
+The `type` attribute of a storage, realm or notification target cannot be changed after creation,
+nor can an `openid` realm's `username_claim` or a storage's backend identity: `path`, `server`,
+`nfs_export`, `share`, `portal`, `target`, `vgname`, `thinpool` and `datastore`, plus `pool` on
+`zfs` and `zfspool` storage and `blocksize` on `zfs` storage (an `rbd` pool and a `zfspool`
+blocksize can be changed, as PVE allows). The module rejects such changes before calling PVE,
+whatever Puppet's `strict` setting; set `ensure => absent` and re-create the resource.
+
+A realm or notification target also rejects attributes that do not belong to its `type`, for
+example `domain` on an `ldap` realm, before anything is sent. A realm stored without a
+`username_claim` reports `sub`, the claim PVE then logs in with.
 
 ## Storage and backup jobs
 

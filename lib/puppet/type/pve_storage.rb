@@ -71,8 +71,7 @@ Puppet::ResourceApi.register_type(
     },
     pool: {
       type: 'Optional[String]',
-      desc: 'Ceph or ZFS pool name. Cannot be changed after creation.',
-      behaviour: :init_only,
+      desc: 'Ceph or ZFS pool name. Cannot be changed after creation for zfs and zfspool storage; recreate the storage instead. PVE lets an rbd storage switch pools.',
     },
     data_pool: {
       type: 'Optional[String]',
@@ -171,8 +170,7 @@ Puppet::ResourceApi.register_type(
     },
     blocksize: {
       type: 'Optional[String]',
-      desc: 'ZFS block size (a power of 2, optionally suffixed with k or m). Cannot be changed after creation.',
-      behaviour: :init_only,
+      desc: 'ZFS block size (a power of 2, optionally suffixed with k or m). Cannot be changed after creation for zfs (ZFS over iSCSI) storage; recreate the storage instead.',
     },
     preallocation: {
       type: "Optional[Enum['off', 'metadata', 'falloc', 'full']]",

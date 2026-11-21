@@ -2466,7 +2466,7 @@ The following properties are available in the `pve_storage` type.
 
 Data type: `Optional[String]`
 
-ZFS block size (a power of 2, optionally suffixed with k or m). Cannot be changed after creation.
+ZFS block size (a power of 2, optionally suffixed with k or m). Cannot be changed after creation for zfs (ZFS over iSCSI) storage; recreate the storage instead.
 
 ##### `bwlimit`
 
@@ -2618,7 +2618,7 @@ Filesystem path for directory-like storage backends. Cannot be changed after cre
 
 Data type: `Optional[String]`
 
-Ceph or ZFS pool name. Cannot be changed after creation.
+Ceph or ZFS pool name. Cannot be changed after creation for zfs and zfspool storage; recreate the storage instead. PVE lets an rbd storage switch pools.
 
 ##### `portal`
 

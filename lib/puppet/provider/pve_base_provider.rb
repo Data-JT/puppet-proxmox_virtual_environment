@@ -3,6 +3,7 @@
 require 'puppet/resource_api/simple_provider'
 require_relative '../../puppet_x/proxmox_virtual_environment/config' # see config.rb: bare require breaks in puppetserver
 require_relative '../../puppet_x/proxmox_virtual_environment/secret_store' # ditto
+require_relative '../../puppet_x/proxmox_virtual_environment/change_check'
 require 'yaml'
 
 # Base provider with shared PVE attribute mapping helpers.
@@ -136,8 +137,31 @@ class Puppet::Provider::PveBaseProvider < Puppet::ResourceApi::SimpleProvider
   def set(context, changes)
     assert_cluster_manager!
     changes = refresh_changes(context, changes) if @transport_config_missing
-    validate_init_only_changes!(context, changes)
+    changes.each { |name, change| PuppetX::ProxmoxVirtualEnvironment::ChangeCheck.new(name, change).run(self.class, context) }
     super
+  end
+
+  # Type-specific attributes for each value of `type`, for providers whose
+  # resources live under a per-type endpoint. Attributes listed for no type
+  # (comment, the namevars) apply to all of them. nil: the resource has no
+  # types to tell apart.
+  def self.attributes_by_type
+    nil
+  end
+
+  # Attributes PVE takes when a resource is created and refuses afterwards.
+  # The type marks them `behaviour: :init_only`; a provider adds those that
+  # are fixed only for some values of `type`.
+  def self.create_only_attributes(context, _resource)
+    context.type.attributes.select { |_name, options| options[:behaviour] == :init_only }.keys
+  end
+
+  # The update request without the create-only attributes, which the update
+  # endpoints refuse. set has already rejected a change to any of them, so
+  # what is left out here is unchanged.
+  def without_create_only(context, declared)
+    create_only = self.class.create_only_attributes(context, declared)
+    declared.reject { |attribute, _value| create_only.include?(attribute) }
   end
 
   # Returning nil is the Resource API insync? contract: it signals "I don't handle
@@ -342,24 +366,6 @@ class Puppet::Provider::PveBaseProvider < Puppet::ResourceApi::SimpleProvider
         context.type.namevars.all? { |namevar| resource[namevar] == should[namevar] }
       end
       change.merge(is: actual || absent_state(context, should))
-    end
-  end
-
-  def init_only_attributes(context)
-    context.type.attributes.select { |_name, options| options[:behaviour] == :init_only }.keys
-  end
-
-  def validate_init_only_changes!(context, changes)
-    init_only = init_only_attributes(context)
-    changes.each_value do |change|
-      is = change[:is] || {}
-      should = change[:should] || {}
-      next unless is[:ensure].to_s == 'present' && should[:ensure].to_s == 'present'
-
-      changed = init_only.select { |attribute| should.key?(attribute) && is[attribute] != should[attribute] }
-      next if changed.empty?
-
-      raise Puppet::ResourceError, "Cannot change immutable PVE attributes: #{changed.join(', ')}"
     end
   end
 

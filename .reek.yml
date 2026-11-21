@@ -87,7 +87,6 @@ detectors:
       - "Puppet::Provider::PveApiToken::ProxmoxVirtualEnvironment#persist_secret"
       - "Puppet::Provider::PveBackupJob::ProxmoxVirtualEnvironment#get"
       - "Puppet::Provider::PveBackupJob::ProxmoxVirtualEnvironment#request_body"
-      - "Puppet::Provider::PveBaseProvider#validate_init_only_changes!"
       - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment#decode_property_strings"
       - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment#desired_secret_map"
       - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment#stored_secret_map"
@@ -130,7 +129,6 @@ detectors:
     # List endpoints return nested resource collections that must be flattened.
     exclude:
       - "Puppet::Provider::PveBaseProvider#refresh_changes"
-      - "Puppet::Provider::PveBaseProvider#validate_init_only_changes!"
       - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment#decode_property_strings"
       - "Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment#get"
   NilCheck:
@@ -201,7 +199,6 @@ detectors:
       - "Puppet::Provider::PveBaseProvider#puppet_to_pve"
       - "Puppet::Provider::PveBaseProvider#pve_to_puppet"
       - "Puppet::Provider::PveBaseProvider#refresh_changes"
-      - "Puppet::Provider::PveBaseProvider#validate_init_only_changes!"
       - "Puppet::Provider::PveDatacenterConfig::ProxmoxVirtualEnvironment#get"
       - "Puppet::Provider::PveDatacenterConfig::ProxmoxVirtualEnvironment#insync?"
       - "Puppet::Provider::PveNodeConfig::ProxmoxVirtualEnvironment#node_config"
@@ -236,7 +233,6 @@ detectors:
       - "Puppet::Provider::PveRealm::ProxmoxVirtualEnvironment#stored_bind_password?"
       - "Puppet::Provider::PveUser::ProxmoxVirtualEnvironment#secret_matches?"
       - "Puppet::Provider::PveUser::ProxmoxVirtualEnvironment#stored_password?"
-      - "Puppet::Provider::PveBaseProvider#init_only_attributes"
       - "Puppet::Provider::PveBaseProvider#parse_property_string"
       - "Puppet::Provider::PveBaseProvider#secret_matches?"
       - "Puppet::Provider::PveBaseProvider#serialize_property_string"

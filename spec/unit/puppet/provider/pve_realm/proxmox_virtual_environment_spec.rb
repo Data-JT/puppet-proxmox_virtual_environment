@@ -2,15 +2,16 @@
 
 require 'spec_helper'
 require 'puppet/provider/pve_realm/proxmox_virtual_environment'
+require 'puppet/type/pve_realm'
 
 RSpec.describe Puppet::Provider::PveRealm::ProxmoxVirtualEnvironment do
   subject(:provider) { described_class.new }
 
   let(:transport) { instance_double('Puppet::Transport::ProxmoxVirtualEnvironment') }
-  let(:immutable_attributes) do
-    [:type, :username_claim].to_h { |name| [name, { behaviour: :init_only }] }
+  let(:type) do
+    instance_double('Puppet::ResourceApi::Type', namevars: [:realm],
+                                                 attributes: Puppet::Type.type(:pve_realm).type_definition.attributes)
   end
-  let(:type) { instance_double('Puppet::ResourceApi::Type', namevars: [:realm], attributes: immutable_attributes) }
   let(:context) { instance_double('Puppet::ResourceApi::BaseContext', type: type) }
 
   before(:each) do
@@ -143,5 +144,36 @@ RSpec.describe Puppet::Provider::PveRealm::ProxmoxVirtualEnvironment do
     should = { realm: 'example', type: 'openid', username_claim: 'username', comment: 'OIDC', ensure: 'present' }
     expect(transport).to receive(:put).with(context, '/access/domains/example', { 'comment' => 'OIDC' })
     provider.update(context, 'example', should)
+  end
+
+  describe 'type-dependent checks' do
+    before(:each) do
+      allow(described_class).to receive(:load_transport_config).and_return(cluster_manager: Puppet[:certname])
+    end
+
+    # PVE logs in with the "sub" claim when a realm stores none.
+    it 'reports username_claim "sub" for an openid realm stored without one' do
+      allow(transport).to receive(:get).with(context, '/access/domains').and_return([{ 'realm' => 'sso' }])
+      allow(transport).to receive(:get).with(context, '/access/domains/sso')
+                                       .and_return('type' => 'openid', 'issuer-url' => 'https://i')
+      expect(provider.get(context).first).to include(username_claim: 'sub')
+    end
+
+    it 'rejects changing username_claim whatever strict says' do
+      expect(transport).not_to receive(:put)
+      expect {
+        provider.set(context, 'sso' => { is: { realm: 'sso', type: 'openid', username_claim: 'sub', ensure: 'present' },
+                                         should: { realm: 'sso', type: 'openid', username_claim: 'email', ensure: 'present' } })
+      }.to raise_error(Puppet::ResourceError, %r{sso: username_claim cannot be changed from "sub" to "email"; recreate the resource instead})
+    end
+
+    it 'rejects an attribute of another realm type before creating anything' do
+      expect(transport).not_to receive(:post)
+      expect {
+        provider.set(context, 'corp' => { is: { realm: 'corp', ensure: 'absent' },
+                                          should: { realm: 'corp', type: 'ldap', server1: 'x', domain: 'example.com',
+                                                    ensure: 'present' } })
+      }.to raise_error(Puppet::ResourceError, %r{corp: domain does not apply to type ldap})
+    end
   end
 end

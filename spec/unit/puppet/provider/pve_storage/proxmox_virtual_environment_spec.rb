@@ -2,17 +2,16 @@
 
 require 'spec_helper'
 require 'puppet/provider/pve_storage/proxmox_virtual_environment'
+require 'puppet/type/pve_storage'
 
 RSpec.describe Puppet::Provider::PveStorage::ProxmoxVirtualEnvironment do
   subject(:provider) { described_class.new }
 
   let(:transport) { instance_double('Puppet::Transport::ProxmoxVirtualEnvironment') }
-  let(:immutable_attributes) do
-    [:type, :path, :server, :nfs_export, :share, :portal, :target, :vgname, :thinpool, :pool, :datastore, :blocksize].to_h do |name|
-      [name, { behaviour: :init_only }]
-    end
+  let(:type) do
+    instance_double('Puppet::ResourceApi::Type', namevars: [:storage],
+                                                 attributes: Puppet::Type.type(:pve_storage).type_definition.attributes)
   end
-  let(:type) { instance_double('Puppet::ResourceApi::Type', namevars: [:storage], attributes: immutable_attributes) }
   let(:context) { instance_double('Puppet::ResourceApi::BaseContext', type: type) }
 
   before(:each) do
@@ -209,7 +208,7 @@ RSpec.describe Puppet::Provider::PveStorage::ProxmoxVirtualEnvironment do
     expect(transport).to receive(:put).with(
       context,
       '/storage/ceph-ssd',
-      { 'content' => 'images,rootdir', 'krbd' => false },
+      { 'pool' => 'ceph-ssd', 'content' => 'images,rootdir', 'krbd' => false },
     )
     provider.update(context, 'ceph-ssd', should)
   end
@@ -245,7 +244,7 @@ RSpec.describe Puppet::Provider::PveStorage::ProxmoxVirtualEnvironment do
 
   it 'tolerates an unset shared attribute on an unsupported backend type' do
     should = { storage: 'ceph-ssd', type: 'rbd', pool: 'ceph-ssd', content: 'images', shared: nil, ensure: 'present' }
-    expect(transport).to receive(:put).with(context, '/storage/ceph-ssd', { 'content' => 'images' })
+    expect(transport).to receive(:put).with(context, '/storage/ceph-ssd', { 'pool' => 'ceph-ssd', 'content' => 'images' })
     provider.update(context, 'ceph-ssd', should)
   end
 
@@ -269,6 +268,50 @@ RSpec.describe Puppet::Provider::PveStorage::ProxmoxVirtualEnvironment do
       { 'content' => 'images', 'disable' => true },
     )
     provider.update(context, 'local-dir', should)
+  end
+
+  describe 'options PVE fixes only for some backend types' do
+    before(:each) do
+      allow(described_class).to receive(:load_transport_config).and_return(cluster_manager: Puppet[:certname])
+    end
+
+    def change(type, is, should)
+      { is: is.merge(storage: 's', type: type, ensure: 'present'),
+        should: should.merge(storage: 's', type: type, ensure: 'present') }
+    end
+
+    it 'rejects a pool change on zfspool storage' do
+      expect(transport).not_to receive(:put)
+      expect { provider.set(context, 's' => change('zfspool', { pool: 'rpool/a' }, { pool: 'rpool/b' })) }
+        .to raise_error(Puppet::ResourceError, %r{s: pool cannot be changed from "rpool/a" to "rpool/b"; recreate the resource instead})
+    end
+
+    it 'rejects a blocksize change on ZFS over iSCSI storage' do
+      expect(transport).not_to receive(:put)
+      expect { provider.set(context, 's' => change('zfs', { blocksize: '8k' }, { blocksize: '16k' })) }
+        .to raise_error(Puppet::ResourceError, %r{s: blocksize cannot be changed})
+    end
+
+    it 'leaves an unchanged zfspool pool out of the update' do
+      expect(transport).to receive(:put).with(context, '/storage/s', { 'content' => 'images' })
+      provider.update(context, 's', storage: 's', type: 'zfspool', pool: 'rpool/a', content: 'images', ensure: 'present')
+    end
+
+    it 'sends a pool change on rbd storage' do
+      expect(transport).to receive(:put).with(context, '/storage/s', { 'pool' => 'new' })
+      provider.update(context, 's', storage: 's', type: 'rbd', pool: 'new', ensure: 'present')
+    end
+
+    it 'sends a blocksize change on zfspool storage' do
+      expect(transport).to receive(:put).with(context, '/storage/s', { 'blocksize' => '16k' })
+      provider.update(context, 's', storage: 's', type: 'zfspool', blocksize: '16k', ensure: 'present')
+    end
+
+    it 'still rejects a path change whatever strict says' do
+      expect(transport).not_to receive(:put)
+      expect { provider.set(context, 's' => change('dir', { path: '/a' }, { path: '/b' })) }
+        .to raise_error(Puppet::ResourceError, %r{s: path cannot be changed from "/a" to "/b"})
+    end
   end
 
   it 'sends delete_properties as the PVE comma-separated delete parameter' do

@@ -3,6 +3,7 @@
 require 'spec_helper'
 require 'puppet/provider/pve_base_provider'
 require 'puppet/provider/pve_notification_target/proxmox_virtual_environment'
+require 'puppet/type/pve_notification_target'
 
 RSpec.describe Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment do
   subject(:provider) { described_class.new }
@@ -340,6 +341,31 @@ RSpec.describe Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironmen
       expect(mock_transport).not_to receive(:delete)
       expect { provider.delete(context, 'ghost') }
         .to raise_error(Puppet::ResourceError, %r{unknown notification target type for 'ghost'})
+    end
+  end
+
+  describe '#set' do
+    before(:each) do
+      allow(described_class).to receive(:load_transport_config).and_return(cluster_manager: Puppet[:certname])
+      allow(mock_type).to receive(:attributes)
+        .and_return(Puppet::Type.type(:pve_notification_target).type_definition.attributes)
+    end
+
+    it 'rejects changing the target type' do
+      expect(mock_transport).not_to receive(:put)
+      expect {
+        provider.set(context, 'relay' => { is: { name: 'relay', type: 'smtp', ensure: 'present' },
+                                           should: { name: 'relay', type: 'gotify', ensure: 'present' } })
+      }.to raise_error(Puppet::ResourceError, %r{relay: type cannot be changed from "smtp" to "gotify"; recreate the resource instead})
+    end
+
+    it 'rejects an attribute of another target type before creating anything' do
+      expect(mock_transport).not_to receive(:post)
+      expect {
+        provider.set(context, 'hook' => { is: { name: 'hook', ensure: 'absent' },
+                                          should: { name: 'hook', type: 'webhook', url: 'https://h', mailto: ['a@b'],
+                                                    ensure: 'present' } })
+      }.to raise_error(Puppet::ResourceError, %r{hook: mailto does not apply to type webhook})
     end
   end
 end

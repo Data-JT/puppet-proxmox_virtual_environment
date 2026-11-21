@@ -211,7 +211,10 @@ documented in [REFERENCE.md](https://github.com/Data-JT/puppet-proxmox_virtual_e
   create, update and delete.
 - SDN changes are staged only; applying them requires `pve_sdn_apply`, which reloads networking
   on every node. SDN fabrics, prefix lists, route maps and rollback are not modelled.
-- The `type` of a storage, realm or notification target cannot be changed; remove and re-create it.
+- The `type` of a storage, realm or notification target, an `openid` realm's `username_claim` and a
+  storage's backend identity (`path`, `server`, `pool` and the like) cannot be changed.
+  The run fails before calling PVE, whatever Puppet's `strict` setting; remove and re-create the
+  resource. An attribute that does not belong to the declared `type` is rejected the same way.
 - `pve_node_config` and `pve_datacenter_config` cannot be deleted; `ensure => absent` fails.
 - `pve_role` manages custom roles only; `pve_group` does not manage membership (set it through
   `pve_user`).

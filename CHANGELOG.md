@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `pve_storage`: `pool` is fixed at creation only on `zfs` and `zfspool` storage, and
+  `blocksize` only on `zfs` storage, as in pve-storage. Changing the pool of an `rbd` storage
+  or the block size of a `zfspool` storage is now applied instead of refused.
+- `pve_realm`: an `openid` realm stored without a `username_claim` now reports `sub`, the
+  claim PVE logs in with then, so declaring `username_claim => 'sub'` on it is no change.
+
+### Changed
+
+- A change to an attribute fixed at creation fails with "<attribute> cannot be changed from X
+  to Y; recreate the resource instead" (before: "Cannot change immutable PVE attributes:
+  <attribute>"), the same message as in the PBS and PDM modules.
+- `pve_realm` and `pve_notification_target` reject an attribute that does not belong to their
+  `type` (for example `domain` on an `ldap` realm) before anything is sent. Before, PVE refused
+  the request.
+
 ## [0.1.1] - 2026-11-06
 
 ### Changed

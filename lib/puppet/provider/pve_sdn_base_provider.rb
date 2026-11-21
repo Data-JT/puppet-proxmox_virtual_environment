@@ -90,7 +90,7 @@ class Puppet::Provider::PveSdnBaseProvider < Puppet::Provider::PveBaseProvider
   def update(context, name, should)
     context.notice("Updating SDN #{self.class.sdn_object_label} '#{name}' (pending; not applied)")
     sdn_call(context, 'PUT', object_path,
-             body: update_body(context, mutable_should(context, should)),
+             body: update_body(context, without_create_only(context, should)),
              path_params: path_params(name))
   end
 
@@ -137,14 +137,6 @@ class Puppet::Provider::PveSdnBaseProvider < Puppet::Provider::PveBaseProvider
     normalize_lists(super,
                     pve_keys_for(provider.property_string_array_attributes),
                     pve_keys_for(provider.string_list_attributes))
-  end
-
-  # Drops the attributes PVE refuses to change after creation. Shared with the
-  # subnet provider, which addresses a nested path and so cannot use the
-  # generic update above.
-  def mutable_should(context, should)
-    immutable = init_only_attributes(context)
-    should.reject { |key, _value| immutable.include?(key) }
   end
 
   private

@@ -38,6 +38,18 @@ class Puppet::Provider::PveNotificationTarget::ProxmoxVirtualEnvironment < Puppe
     [:disable]
   end
 
+  # Read from the create and update schemas of each endpoint type in the PVE
+  # API viewer (PVE 9).
+  def self.attributes_by_type
+    {
+      'sendmail' => [:author, :disable, :from_address, :mailto, :mailto_user],
+      'smtp'     => [:author, :disable, :from_address, :mailto, :mailto_user, :mode, :port, :server, :smtp_password,
+                     :username],
+      'gotify'   => [:disable, :server, :token],
+      'webhook'  => [:body, :disable, :header, :http_method, :secret, :url],
+    }
+  end
+
   def self.delete_properties_as_array?
     true
   end

@@ -577,7 +577,7 @@ RSpec.describe Puppet::Provider::PveBaseProvider do
             should: { ensure: 'present', type: 'new' },
           },
         )
-      }.to raise_error(Puppet::ResourceError, %r{Cannot change immutable PVE attributes: type})
+      }.to raise_error(Puppet::ResourceError, %r{resource: type cannot be changed from "old" to "new"; recreate the resource instead})
     end
   end
 end

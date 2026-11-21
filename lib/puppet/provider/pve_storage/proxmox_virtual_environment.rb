@@ -68,8 +68,22 @@ class Puppet::Provider::PveStorage::ProxmoxVirtualEnvironment < Puppet::Provider
   # local and forced to shared=0.
   SHARED_FORCED_TRUE_TYPES = ['cephfs', 'cifs', 'glusterfs', 'iscsi', 'iscsidirect', 'nfs', 'pbs', 'rbd', 'zfs'].freeze
 
+  # Options PVE fixes after creation only for some backend types, so they
+  # cannot be init_only on the type, which would hold them for every type.
+  # From the `fixed => 1` options of each plugin in pve-storage
+  # (ZFSPlugin.pm, ZFSPoolPlugin.pm); RBDPlugin leaves `pool` changeable and
+  # ZFSPoolPlugin leaves `blocksize` changeable.
+  FIXED_BY_TYPE = {
+    'zfs'     => [:pool, :blocksize],
+    'zfspool' => [:pool],
+  }.freeze
+
   def self.secret_attributes
     [:password]
+  end
+
+  def self.create_only_attributes(context, resource)
+    super + FIXED_BY_TYPE.fetch(resource[:type].to_s, [])
   end
 
   def stored_secret(title, attribute_name)
@@ -106,8 +120,7 @@ class Puppet::Provider::PveStorage::ProxmoxVirtualEnvironment < Puppet::Provider
 
   def update(context, name, should)
     context.notice("Updating storage '#{name}'")
-    immutable = init_only_attributes(context)
-    body = settable_should(should).reject { |key, _| immutable.include?(key) }
+    body = without_create_only(context, settable_should(should))
     pve_transport(context).put(context, "/storage/#{name}", update_body(context, body))
   end
 

@@ -68,7 +68,7 @@ class Puppet::Provider::PveSdnSubnet::ProxmoxVirtualEnvironment < Puppet::Provid
   def update(context, name, should)
     context.notice("Updating SDN subnet '#{name[:cidr]}' in VNet '#{name[:vnet]}' (pending; not applied)")
     sdn_call(context, 'PUT', SUBNET_PATH,
-             body: update_body(context, mutable_should(context, should)),
+             body: update_body(context, without_create_only(context, should)),
              path_params: subnet_path_params(context, name))
   end
 
